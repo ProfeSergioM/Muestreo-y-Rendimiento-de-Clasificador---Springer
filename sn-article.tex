@@ -401,6 +401,85 @@ Laguna del Maule. Every system therefore contributes at least two classes,
 and no class is admitted at every system.
 
 
+\subsection{External catalogs}\label{subsec:external}
+
+Four catalogs compiled by other agencies provide labeled records on which the
+pipeline of Section~\ref{sec:methods} is applied without any parameter being
+re-fitted. They serve as an external validation of the descriptors and are
+not part of the analyzed population of Table~\ref{tab:counts}. This external
+validation is the second stage of the programme opened in
+\cite{morales_recurrence_2026}, which established the recurrence and spectral
+descriptors on the five OVDAS systems alone; here the same descriptors are
+measured on records the pipeline was never built from, labeled under other
+operational practices. Table~\ref{tab:external} summarizes the four catalogs.
+
+The Deception Island dataset \cite{cortes_standardization_2019} comprises two
+independent deployments on the same Antarctic volcano, in 1995 and 2009, with
+different stations and instruments. Records are sampled at 50~Hz. Its label
+file delimits every event by a start and an end, and every LP and VT segment
+of both deployments enters the review of Section~\ref{subsec:manualcut}. A
+single record holds several labeled segments, typical of the swarms the
+volcano produces, and each segment is reviewed as its own event.
+
+VCSEIS \cite{zhong_deep-learning-based_2024}, distributed in SeisBench format
+\cite{woollam_seisbench_2022}, covers four volcanic regions catalogued by the
+Alaska Volcano Observatory, the Hawaiian Volcano Observatory, the Northern
+California Earthquake Data Center and the Pacific Northwest Seismic Network
+(Cascade Range). Records are sampled at 100~Hz, and each trace carries P and S
+arrival samples. Class labels are taken from the catalog field that
+distinguishes long-period from local events; traces carrying any other code
+are left out. A random draw of 500 traces per region and class enters the
+review. VCSEIS distributes one trace per station, so an earthquake recorded
+at several stations appears several times in the draw; one trace per
+earthquake is retained (Section~\ref{subsec:manualcut}).
+
+The VOISS-Net training set \cite{fee_generalized_2025} labels 120~s windows
+of continuous data from volcanoes in Alaska and Hawai`i, one label per window
+and per network. Its Earthquake and Long Period labels enter this study as VT
+and LP. The two classes come from different volcanoes: Earthquake from
+K\={\i}lauea, Redoubt and Tanaga, Long Period from Veniaminof, Semisopochnoi
+and Pavlof, so each of these six systems contributes a single class.
+Waveforms are retrieved from the EarthScope data center at the vertical
+channel of one reference station per volcano, sampled at 40, 50 or 100~Hz
+depending on the station, with 60~s before and 120~s after each labeled
+window. Windows are reviewed in random order within each volcano and class.
+
+The Servicio Geol\'ogico Colombiano (SGC) provided 500 events per class from
+Nevado del Ruiz, labeled LP, VT and HB by its analysts and extracted from the
+waveform archive as one file per event holding the whole network, sampled at
+100~Hz. The files carry no catalog onset or duration. Following the SGC, the
+reference station is Olleta, with Bis as its backup; the two stations differ
+in their records of the same classes, and each is treated as a separate
+system (Section~\ref{subsec:manualcut}).
+
+Across the four catalogs, the comparison is restricted to the classes they
+share with the OVDAS taxonomy: LP and VT in all four, and HB at Nevado del
+Ruiz. Labels for tremor, explosions, noise, regional events and other codes
+have no counterpart in the OVDAS taxonomy and are left out. Each region of
+VCSEIS, each volcano of VOISS-Net and each station at Nevado del Ruiz is a
+separate system, in the same way as the five OVDAS systems.
+
+\begin{table}[h]
+\caption{External catalogs used for validation: the systems each contributes,
+the classes it labels that match the OVDAS taxonomy, its sampling rate, and
+the reference times it supplies. All records are brought to 100~Hz before
+conditioning. The onset, the end of the coda and the noise window of every
+event are set by the manual review of Section~\ref{subsec:manualcut}.}
+\label{tab:external}
+\begin{tabular}{@{}llllp{4.2cm}@{}}
+\toprule
+Catalog & Systems & Classes & Rate (Hz) & Reference supplied \\
+\midrule
+Deception Island \cite{cortes_standardization_2019} & 1 (two deployments) & LP, VT & 50 & segment start and end \\
+VCSEIS \cite{zhong_deep-learning-based_2024} & Alaska, Cascade Range, Hawai`i, N. California & LP, VT & 100 & P and S arrivals \\
+VOISS-Net \cite{fee_generalized_2025} & K\={\i}lauea, Redoubt, Tanaga & VT & 40--100 & 120~s labeled window \\
+ & Veniaminof, Semisopochnoi, Pavlof & LP & 40--100 & 120~s labeled window \\
+SGC, Nevado del Ruiz & Olleta, Bis & LP, VT, HB & 100 & none \\
+\botrule
+\end{tabular}
+\end{table}
+
+
 %%===========================================================================%%
 \section{Methodology}\label{sec:methods}
 
@@ -412,7 +491,10 @@ which a single station is selected at each volcanic system, fixing the
 interval available for analysis. Section~\ref{subsec:conditioning} defines the fixed-length analysis
 window and the conditioning applied to it, together with the criterion by
 which an event is retained in the analyzed population of
-Table~\ref{tab:counts}. Section~\ref{subsec:classsupport} states the minimum
+Table~\ref{tab:counts}. Section~\ref{subsec:codawindow} defines the
+coda-length window computed alongside it for every event, and
+Section~\ref{subsec:manualcut} sets the onset, the end of the coda and the
+noise window of the external records of Section~\ref{subsec:external}. Section~\ref{subsec:classsupport} states the minimum
 per-volcano, per-class support required for a class to enter training and
 evaluation. Section~\ref{subsec:features} computes, for every retained event,
 the thirteen time-domain recurrence descriptors and the three spectral
@@ -512,6 +594,70 @@ separation between the noise window and the onset
 keeps an emergent arrival out of the noise measurement.}
 \label{fig:window}
 \end{figure}
+
+\subsection{Coda-length window}\label{subsec:codawindow}
+
+A second window represents every event alongside the fixed-length window of
+Section~\ref{subsec:conditioning}. It opens at the same onset and closes at
+the end of the coda, so its length follows the duration of the event. The
+two windows answer different questions: the fixed-length window compares
+events over an identical interval, dominated by the onset and the early coda,
+while the coda-length window describes each event as a whole. Computing the
+sixteen descriptors of Section~\ref{subsec:features} on both, for the same
+events, shows which properties of a class are carried by its onset and which
+by its full coda.
+
+At the OVDAS systems the end of the coda is the analyst-assigned duration of
+Section~\ref{subsec:catalog}; at the external catalogs it is the end set in
+the manual review of Section~\ref{subsec:manualcut}. The coda-length window
+is extracted from a padded segment in the same way as the fixed-length one,
+with a noise window and a separation before the onset and an edge margin
+after the end of the coda, and is band-passed to its own analysis band before
+being trimmed. Events shorter than a minimum duration hold too few samples
+for the recurrence descriptors and are excluded from this window, and the
+window is capped at a maximum length, over which the descriptors of a long
+coda are measured on its first part.
+Section~\ref{subsec:configuration} reports the band, the noise window, the
+margins and both limits.
+
+\subsection{Manual segmentation of the external records}\label{subsec:manualcut}
+
+The external catalogs supply labels but not the three references the windows
+require, an onset, the end of the coda and a pre-event noise window, in a
+form comparable to the OVDAS catalog (Table~\ref{tab:external}). The three
+are therefore set by hand for every external event, by a single analyst,
+following one protocol across the four catalogs. Each record is displayed as
+its band-passed trace and its spectrogram, together with the reference the
+catalog supplies: the labeled segment at Deception Island, the P and S
+arrivals in VCSEIS, the 120~s labeled window in VOISS-Net. The analyst marks
+the onset at the first arrival of the labeled event, the end of the coda
+where the signal returns to the pre-event level, and a noise window
+immediately before the onset, free of other events where the record allows
+it.
+
+An event is retained when its onset falls within the reference the catalog
+supplies and its coda can be delimited within the record. It is discarded
+when no event is visible within that reference, when it lasts less than the
+minimum duration of Section~\ref{subsec:codawindow}, or when the record does
+not hold the padded segment of either window. At Nevado del Ruiz, an event
+not visible at Olleta is reviewed at Bis, and the station on which it is cut
+is recorded with the event. The analyst may also revise a label; an event
+relabeled as a tornillo (TO) is kept within LP, the class it was catalogued
+as, and flagged.
+
+An event that enters the review more than once is retained once: an
+earthquake recorded at several VCSEIS stations, identified by its catalog
+source identifier, and an event spanning two consecutive VOISS-Net windows or
+two consecutive SGC files, identified by onsets less than 3~s apart at the
+same system. Of each group, the copy whose onset falls within its labeled
+reference and has the highest signal-to-noise ratio is retained.
+
+All external records are brought to 100~Hz before the conditioning of
+Section~\ref{subsec:conditioning}, so that the embedding of
+Section~\ref{subsec:features}, defined in samples, spans the same time at
+every system. From that point on, both windows and all sixteen descriptors
+are computed with the same code and parameters as at the OVDAS systems.
+
 
 \subsection{Class support criterion}\label{subsec:classsupport}
 
